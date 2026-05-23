@@ -8,13 +8,12 @@ const app = express();
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// ✨ 새로 추가할 마법의 내비게이션 (길 잃은 유저 멱살 잡기!)
+// ✨ 길 잃은 유저 멱살 잡기 (새로고침 에러 방지!)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-const server = http.createServer(app);
-
+// 🚨 딱 한 번만 있어야 하는 서버 선언!
 const server = http.createServer(app);
 
 const io = new Server(server, { 
@@ -31,7 +30,6 @@ io.on('connection', (socket) => {
   socket.on('create_room', (newRoom) => {
     newRoom.players = [];
     newRoom.gmId = socket.id;
-    // ✨ 1번 해결: GM이 설정한 공용 효과음 사운드룸 개설
     newRoom.gmSounds = { ougi: null, break: null, reveal: null }; 
     rooms.push(newRoom);
     io.emit('update_room_list', rooms);
@@ -43,7 +41,6 @@ io.on('connection', (socket) => {
     if (room) {
       room.players = room.players.filter(p => p.socketId !== socket.id);
       room.players.push({ ...playerInfo, socketId: socket.id, isNpc: false });
-      // 방 입장 시 효과음 데이터도 동기화해서 넘겨줌
       io.to(roomId).emit('update_room_data', { players: room.players, gmId: room.gmId, gmSounds: room.gmSounds });
     }
   });
@@ -70,7 +67,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ✨ 1번 해결: GM이 업로드한 3대 지정 효과음을 서버 방 데이터에 저장하고 동기화
   socket.on('gm_update_sounds', ({ roomId, type, audioData }) => {
     const room = rooms.find(r => r.id === roomId);
     if (room) {
@@ -79,7 +75,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ✨ 1번 해결: GM 효과음 강제 공역 방송 재생 장치
   socket.on('gm_play_global_sound', ({ roomId, type, soundName }) => {
     const room = rooms.find(r => r.id === roomId);
     if (room && room.gmSounds[type]) {
@@ -97,8 +92,6 @@ io.on('connection', (socket) => {
         return p;
       });
       io.to(roomId).emit('update_room_data', { players: room.players, gmId: room.gmId, gmSounds: room.gmSounds });
-      
-      // 플롯 공개 시 GM 지정 공개음이 있다면 전원에 강제 방송 처리
       io.to(roomId).emit('global_plot_revealed', { gmNickname: nickname, audioData: room.gmSounds.reveal }); 
     }
   });
@@ -113,7 +106,6 @@ io.on('connection', (socket) => {
           io.to(roomId).emit('update_room_data', { players: room.players, gmId: room.gmId, gmSounds: room.gmSounds });
         }
       }
-      // 오의나 깨기 발동 시 GM이 지정한 공용 효과음 소스를 함께 실어 보냅니다.
       const sharedAudio = type === 'ougi' ? room.gmSounds.ougi : room.gmSounds.break;
       io.to(roomId).emit('global_cutin', { type, nickname, tokenImg, ougiName, ougiEffect, sharedAudio });
     }
@@ -135,7 +127,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ✨ 2번 해결: NPC 오의 공개 상태 저장용 통로 확장
   socket.on('gm_reveal_npc_ougi', ({ roomId, npcId }) => {
     const room = rooms.find(r => r.id === roomId);
     if (room) {
@@ -178,5 +169,6 @@ io.on('connection', (socket) => {
   });
 });
 
+// ✨ 클라우드용 방 번호 할당
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => { console.log(`🚀 시노비가미 서버 ${PORT}번 가동 중!`); });
