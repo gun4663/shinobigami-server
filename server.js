@@ -8,6 +8,13 @@ const app = express();
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// ✨ 새로 추가할 마법의 내비게이션 (길 잃은 유저 멱살 잡기!)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+const server = http.createServer(app);
+
 const server = http.createServer(app);
 
 const io = new Server(server, { 
